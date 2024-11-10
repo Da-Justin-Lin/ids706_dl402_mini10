@@ -1,19 +1,34 @@
-"""
-Main cli or app entry point
-"""
+from pyspark.sql import SparkSession
+from pyspark.sql.functions import col
 
-from mylib.calculator import add
-import click
+# Start a Spark session
+spark = SparkSession.builder.appName("PySpark Data Processing").getOrCreate()
 
-#var=1;var=2
+# Load the dataset
+file_path = "weight_change_dataset.csv"  # Replace with the correct file path if needed
+df = spark.read.csv(file_path, header=True, inferSchema=True)
 
-@click.command("add")
-@click.argument("a", type=int)
-@click.argument("b", type=int)
-def add_cli(a, b):
-    click.echo(add(a, b))
+# Show the first few rows of the dataset
+print("Initial dataset:")
+df.show(5)
 
+# Example Data Transformation: Filter records where weight_change > 0 (assuming there's a 'weight_change' column)
+transformed_df = df.filter(col("weight_change") > 0)
 
-if __name__ == "__main__":
-    # pylint: disable=no-value-for-parameter
-    add_cli()
+# Display transformed data
+print("Transformed data (weight_change > 0):")
+transformed_df.show(5)
+
+# Register the DataFrame as a SQL temporary view
+df.createOrReplaceTempView("weight_data")
+
+# Spark SQL Query: Select average weight_change grouped by another column (e.g., 'age_group')
+# Adjust column names based on your dataset's actual structure
+result_df = spark.sql("SELECT age_group, AVG(weight_change) AS avg_weight_change FROM weight_data GROUP BY age_group")
+
+# Display the SQL query results
+print("SQL Query Result (Average weight_change by age_group):")
+result_df.show()
+
+# Stop the Spark session
+spark.stop()
